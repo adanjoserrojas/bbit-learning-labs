@@ -18,11 +18,11 @@ from consumer_interface import mqConsumerInterface
 
 class mqConsumer(mqConsumerInterface):
 
-    def __init__(self, v1, v2, v3) -> None:
+    def __init__(self, binding_key, queue_name, exchange_name) -> None:
 
-        self.binding = v1
-        self.queue = v2
-        self.exchange = v3
+        self.binding_key = binding_key
+        self.queue_name = queue_name
+        self.exchange_name  = exchange_name
 
         self.setupRMQConnection()
 
@@ -36,30 +36,26 @@ class mqConsumer(mqConsumerInterface):
         self.channel = self.connection.channel()
 
         # Create Queue if not already present
-        self.channel.queue_declare(queue=self.queue)
+        self.channel.queue_declare(queue_name=self.queue_name)
 
         # Create the exchange if not already present
-        self.channel.exchange_declare(exchange=self.exchange)
+        self.channel.exchange_declare(exchange=self.exchange_name)
 
         # Bind Binding Key to Queue on the exchange
-        self.channel.queue_bind(queue=self.queue, exchange=self.exchange, routing_key=self.binding)
+        self.channel.queue_bind(queue_name=self.queue_name, exchange_name=self.exchange_name, binding_key=self.binding_key)
 
         # Set-up Callback function for receiving messages
-        self.channel.basic_consume(queue=self.queue, on_message_callback=self.on_message_callback)
-
-        pass
+        self.channel.basic_consume(queue_name=self.queue_name, on_message_callback=self.on_message_callback)
     
     def on_message_callback(
         self, channel, method_frame, header_frame, body
     ) -> None:
 
         # Acknowledge message
-        self.channel.basic_ack(delivery_tag=method_frame.delivery_tag, False)
+        self.channel.basic_ack(delivery_tag=method_frame.delivery_tag, multiple=False)
 
         # Print message (The message is contained in the body parameter variable)
         print(body.decode("utf-8"))
-
-        pass
     
     def startConsuming(self) -> None:
 
@@ -68,7 +64,6 @@ class mqConsumer(mqConsumerInterface):
 
         # Start consuming messages
         self.channel.start_consuming()
-        pass
     
     def __del__(self) -> None:
 
@@ -76,11 +71,11 @@ class mqConsumer(mqConsumerInterface):
         print("Closing RMQ connection on destruction")
 
         # Close Channel
-        self.channel.close()
+        if hasattr(self, 'channel'):
+            self.channel.close()
 
         # Close Connection
-        self.connection.close()
-
-        pass
+        if hasattr(self, 'connection'):
+            self.connection.close()
     
 
